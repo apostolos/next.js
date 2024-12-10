@@ -112,7 +112,7 @@ describe('non-root-project-monorepo', () => {
           expect(normalizeStackTrace(await getRedboxCallStack(browser)))
             .toMatchInlineSnapshot(`
            "<unknown>
-           [project]/apps/web/app/separate-file.ts [app-rsc] (ecmascript) (rsc://React/Server/file://<full-path>/apps/web/.next/server/chunks/ssr/apps_web_8d1c0a._.js (7:7)
+           [project]/apps/web/app/separate-file.ts [app-rsc] (ecmascript) (rsc://React/Server/file://<full-path>/apps/web/.next/server/chunks/ssr/apps_web_b7421c._.js (7:7)
            innerFunction
            app/source-maps-rsc/page.tsx (10:3)
            Page

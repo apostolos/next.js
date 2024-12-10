@@ -15,13 +15,20 @@ use next_core::{
 };
 use tracing::Instrument;
 use turbo_tasks::{
-    CollectiblesSource, FxIndexMap, FxIndexSet, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt, Vc,
+    CollectiblesSource, FxIndexMap, FxIndexSet, ResolvedVc, TryFlatJoinIterExt, TryJoinIterExt,
+    ValueToString, Vc,
 };
+use turbo_tasks_hash::hash_xxh3_hash64;
 use turbopack_core::{
+    chunk::{module_id_strategies::GlobalModuleIdStrategy, ChunkingType},
     context::AssetContext,
     issue::Issue,
     module::Module,
     module_graph::{GraphTraversalAction, SingleModuleGraph},
+};
+use turbopack_ecmascript::{
+    async_chunk::module::async_loader_modifier,
+    global_module_id_strategy::merge_preprocessed_module_ids,
 };
 
 use crate::{
@@ -48,7 +55,7 @@ async fn get_module_graph_for_endpoint(
     let mut graphs = vec![];
 
     let mut visited_modules = if !server_utils.is_empty() {
-        let graph = SingleModuleGraph::new_with_entries_visited(
+        let graph = SingleModuleGraph::new_with_entries_visited_root(
             *entry,
             server_utils.iter().map(|m| **m).collect(),
             Vc::cell(Default::default()),
@@ -67,7 +74,7 @@ async fn get_module_graph_for_endpoint(
 
     // ast-grep-ignore: to-resolved-in-loop
     for module in server_component_entries.iter() {
-        let graph = SingleModuleGraph::new_with_entries_visited(
+        let graph = SingleModuleGraph::new_with_entries_visited_root(
             *entry,
             vec![Vc::upcast(**module)],
             Vc::cell(visited_modules.clone()),
@@ -85,7 +92,7 @@ async fn get_module_graph_for_endpoint(
 
     // Any previous iteration above would have added the entry node, but not actually visited it.
     visited_modules.remove(&entry);
-    let graph = SingleModuleGraph::new_with_entries_visited(
+    let graph = SingleModuleGraph::new_with_entries_visited_root(
         *entry,
         vec![*entry],
         Vc::cell(visited_modules.clone()),
@@ -95,6 +102,33 @@ async fn get_module_graph_for_endpoint(
     graphs.push(graph);
 
     Ok(Vc::cell(graphs))
+}
+
+#[turbo_tasks::function]
+async fn get_module_graph_for_project(project: ResolvedVc<Project>) -> Vc<SingleModuleGraph> {
+    SingleModuleGraph::new_with_entries(project.get_all_entries())
+}
+
+#[turbo_tasks::function]
+async fn get_additional_module_graph_for_project(
+    project: ResolvedVc<Project>,
+    graph: Vc<SingleModuleGraph>,
+) -> Result<Vc<SingleModuleGraph>> {
+    let visited_modules: HashSet<_> = graph.await?.iter_nodes().map(|n| n.module).collect();
+    let entries = project.get_all_entries().await?;
+    let additional_entries = project
+        .get_all_additional_entries(ReducedGraphs::new(vec![graph], false))
+        .await?;
+    let collect = entries
+        .iter()
+        .copied()
+        .chain(additional_entries.iter().copied())
+        .collect();
+
+    Ok(SingleModuleGraph::new_with_entries_visited(
+        Vc::cell(collect),
+        Vc::cell(visited_modules),
+    ))
 }
 
 #[turbo_tasks::value]
@@ -459,6 +493,52 @@ pub struct ReducedGraphs {
 
 #[turbo_tasks::value_impl]
 impl ReducedGraphs {
+    #[turbo_tasks::function]
+    async fn new(graphs: Vec<Vc<SingleModuleGraph>>, is_single_page: bool) -> Result<Vc<Self>> {
+        let next_dynamic = async {
+            graphs
+                .iter()
+                .map(|graph| {
+                    NextDynamicGraph::new_with_entries(*graph, is_single_page).to_resolved()
+                })
+                .try_join()
+                .await
+        }
+        .instrument(tracing::info_span!("generating next/dynamic graphs"))
+        .await?;
+
+        let server_actions = async {
+            graphs
+                .iter()
+                .map(|graph| {
+                    ServerActionsGraph::new_with_entries(*graph, is_single_page).to_resolved()
+                })
+                .try_join()
+                .await
+        }
+        .instrument(tracing::info_span!("generating server actions graphs"))
+        .await?;
+
+        let client_references = async {
+            graphs
+                .iter()
+                .map(|graph| {
+                    ClientReferencesGraph::new_with_entries(*graph, is_single_page).to_resolved()
+                })
+                .try_join()
+                .await
+        }
+        .instrument(tracing::info_span!("generating client references graphs"))
+        .await?;
+
+        Ok(Self {
+            next_dynamic,
+            server_actions,
+            client_references,
+        }
+        .cell())
+    }
+
     /// Returns the next/dynamic-ally imported (client) modules (from RSC and SSR modules) for the
     /// given endpoint.
     #[turbo_tasks::function]
@@ -586,62 +666,21 @@ async fn get_reduced_graphs_for_endpoint_inner_operation(
             async move { get_module_graph_for_endpoint(*entry).await }
                 .instrument(tracing::info_span!("module graph for endpoint"))
                 .await?
-                .clone_value(),
+                .iter()
+                .map(|v| **v)
+                .collect(),
         ),
         NextMode::Build => (
             false,
             vec![
-                async move {
-                    SingleModuleGraph::new_with_entries(project.get_all_entries())
-                        .to_resolved()
-                        .await
-                }
-                .instrument(tracing::info_span!("module graph for app"))
-                .await?,
+                *async move { get_module_graph_for_project(*project).to_resolved().await }
+                    .instrument(tracing::info_span!("module graph for app"))
+                    .await?,
             ],
         ),
     };
 
-    let next_dynamic = async {
-        graphs
-            .iter()
-            .map(|graph| NextDynamicGraph::new_with_entries(**graph, is_single_page).to_resolved())
-            .try_join()
-            .await
-    }
-    .instrument(tracing::info_span!("generating next/dynamic graphs"))
-    .await?;
-
-    let server_actions = async {
-        graphs
-            .iter()
-            .map(|graph| {
-                ServerActionsGraph::new_with_entries(**graph, is_single_page).to_resolved()
-            })
-            .try_join()
-            .await
-    }
-    .instrument(tracing::info_span!("generating server actions graphs"))
-    .await?;
-
-    let client_references = async {
-        graphs
-            .iter()
-            .map(|graph| {
-                ClientReferencesGraph::new_with_entries(**graph, is_single_page).to_resolved()
-            })
-            .try_join()
-            .await
-    }
-    .instrument(tracing::info_span!("generating client references graphs"))
-    .await?;
-
-    Ok(ReducedGraphs {
-        next_dynamic,
-        server_actions,
-        client_references,
-    }
-    .cell())
+    Ok(ReducedGraphs::new(graphs, is_single_page))
 }
 
 /// Generates a [ReducedGraph] for the given project and endpoint containing information that is
@@ -661,4 +700,59 @@ pub async fn get_reduced_graphs_for_endpoint(
         let _issues = result_op.take_collectibles::<Box<dyn Issue>>();
     }
     Ok(result_vc)
+}
+
+#[turbo_tasks::function]
+pub async fn get_global_module_id_strategy(
+    project: Vc<Project>,
+) -> Result<Vc<GlobalModuleIdStrategy>> {
+    let graph_op = get_module_graph_for_project(project);
+    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
+    let graph = graph_op.strongly_consistent().await?;
+    let _ = graph_op.take_collectibles::<Box<dyn Issue>>();
+
+    let additional_graph_op = get_additional_module_graph_for_project(project, graph_op);
+    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
+    let additional_graph = additional_graph_op.strongly_consistent().await?;
+    let _ = additional_graph_op.take_collectibles::<Box<dyn Issue>>();
+
+    let graphs = [graph, additional_graph];
+
+    let mut idents: Vec<_> = graphs
+        .iter()
+        .flat_map(|graph| graph.iter_nodes())
+        .map(|node| node.module.ident())
+        .collect();
+
+    for graph in graphs.iter() {
+        // Additionally, add all the modules that are inserted by chunking (i.e. async loaders)
+        graph.traverse_edges(|(parent, current)| {
+            if let Some((_, &ChunkingType::Async)) = parent {
+                idents.push(
+                    current
+                        .module
+                        .ident()
+                        .with_modifier(async_loader_modifier()),
+                );
+            }
+            GraphTraversalAction::Continue
+        })?;
+    }
+
+    let module_id_map = idents
+        .into_iter()
+        .map(|ident| ident.to_string())
+        .try_join()
+        .await?
+        .iter()
+        .map(|module_ident| {
+            let ident_str = module_ident.clone_value();
+            let hash = hash_xxh3_hash64(&ident_str);
+            (ident_str, hash)
+        })
+        .collect();
+
+    let module_id_map = merge_preprocessed_module_ids(&module_id_map).await?;
+
+    GlobalModuleIdStrategy::new(module_id_map).await
 }
