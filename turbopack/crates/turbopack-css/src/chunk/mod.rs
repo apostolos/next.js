@@ -501,7 +501,7 @@ impl ChunkType for CssChunkType {
         let content = CssChunkContent {
             chunk_items: chunk_items
                 .iter()
-                .map(|(chunk_item, _async_info)| async move {
+                .map(|(_, chunk_item, _async_info)| async move {
                     let Some(chunk_item) =
                         Vc::try_resolve_downcast::<Box<dyn CssChunkItem>>(*chunk_item).await?
                     else {
