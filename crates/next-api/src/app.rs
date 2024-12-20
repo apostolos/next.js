@@ -302,7 +302,7 @@ impl AppProject {
     pub fn client_reference_transition(self: Vc<Self>) -> Vc<Box<dyn Transition>> {
         Vc::upcast(NextEcmascriptClientReferenceTransition::new(
             Vc::upcast(self.client_transition()),
-            self.ssr_transition(),
+            Vc::upcast(self.ssr_transition()),
         ))
     }
 
@@ -310,7 +310,7 @@ impl AppProject {
     pub fn edge_client_reference_transition(self: Vc<Self>) -> Vc<Box<dyn Transition>> {
         Vc::upcast(NextEcmascriptClientReferenceTransition::new(
             Vc::upcast(self.client_transition()),
-            self.edge_ssr_transition(),
+            Vc::upcast(self.edge_ssr_transition()),
         ))
     }
 
