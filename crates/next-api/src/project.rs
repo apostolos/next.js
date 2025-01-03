@@ -232,18 +232,18 @@ pub struct DefineEnv {
     pub nodejs: Vec<(RcStr, RcStr)>,
 }
 
-#[derive(Serialize, Deserialize, TraceRawVcs, PartialEq, Eq, ValueDebugFormat)]
+#[derive(Serialize, Deserialize, TraceRawVcs, PartialEq, Eq, ValueDebugFormat, NonLocalValue)]
 pub struct Middleware {
-    pub endpoint: Vc<Box<dyn Endpoint>>,
+    pub endpoint: ResolvedVc<Box<dyn Endpoint>>,
 }
 
-#[derive(Serialize, Deserialize, TraceRawVcs, PartialEq, Eq, ValueDebugFormat)]
+#[derive(Serialize, Deserialize, TraceRawVcs, PartialEq, Eq, ValueDebugFormat, NonLocalValue)]
 pub struct Instrumentation {
-    pub node_js: Vc<Box<dyn Endpoint>>,
-    pub edge: Vc<Box<dyn Endpoint>>,
+    pub node_js: ResolvedVc<Box<dyn Endpoint>>,
+    pub edge: ResolvedVc<Box<dyn Endpoint>>,
 }
 
-#[turbo_tasks::value(local)]
+#[turbo_tasks::value]
 pub struct ProjectContainer {
     name: RcStr,
     options_state: State<Option<ProjectOptions>>,
@@ -734,7 +734,7 @@ impl Project {
         let mut modules = Vec::new();
 
         async fn add_endpoint(
-            endpoint: Vc<Box<dyn Endpoint>>,
+            endpoint: ResolvedVc<Box<dyn Endpoint>>,
             modules: &mut Vec<ResolvedVc<Box<dyn Module>>>,
         ) -> Result<()> {
             let root_modules = endpoint.root_modules().await?;
@@ -747,9 +747,9 @@ impl Project {
         let entrypoints = self.entrypoints().await?;
 
         modules.extend(self.client_main_modules().await?.iter().copied());
-        add_endpoint(*entrypoints.pages_error_endpoint, &mut modules).await?;
-        add_endpoint(*entrypoints.pages_app_endpoint, &mut modules).await?;
-        add_endpoint(*entrypoints.pages_document_endpoint, &mut modules).await?;
+        add_endpoint(entrypoints.pages_error_endpoint, &mut modules).await?;
+        add_endpoint(entrypoints.pages_app_endpoint, &mut modules).await?;
+        add_endpoint(entrypoints.pages_document_endpoint, &mut modules).await?;
 
         if let Some(middleware) = &entrypoints.middleware {
             add_endpoint(middleware.endpoint, &mut modules).await?;
@@ -768,10 +768,10 @@ impl Project {
                     html_endpoint,
                     data_endpoint: _,
                 } => {
-                    add_endpoint(**html_endpoint, &mut modules).await?;
+                    add_endpoint(*html_endpoint, &mut modules).await?;
                 }
                 Route::PageApi { endpoint } => {
-                    add_endpoint(**endpoint, &mut modules).await?;
+                    add_endpoint(*endpoint, &mut modules).await?;
                 }
                 Route::AppPage(page_routes) => {
                     for AppPageRoute {
@@ -787,7 +787,7 @@ impl Project {
                     original_name: _,
                     endpoint,
                 } => {
-                    add_endpoint(**endpoint, &mut modules).await?;
+                    add_endpoint(*endpoint, &mut modules).await?;
                 }
                 Route::Conflict => {
                     tracing::info!("WARN: conflict");
@@ -1056,7 +1056,7 @@ impl Project {
         let middleware = self.find_middleware();
         let middleware = if let FindContextFileResult::Found(..) = *middleware.await? {
             Some(Middleware {
-                endpoint: self.middleware_endpoint(),
+                endpoint: self.middleware_endpoint().to_resolved().await?,
             })
         } else {
             None
@@ -1065,8 +1065,8 @@ impl Project {
         let instrumentation = self.find_instrumentation();
         let instrumentation = if let FindContextFileResult::Found(..) = *instrumentation.await? {
             Some(Instrumentation {
-                node_js: self.instrumentation_endpoint(false),
-                edge: self.instrumentation_endpoint(true),
+                node_js: self.instrumentation_endpoint(false).to_resolved().await?,
+                edge: self.instrumentation_endpoint(true).to_resolved().await?,
             })
         } else {
             None
