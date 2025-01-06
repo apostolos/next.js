@@ -1117,7 +1117,9 @@ async function renderToHTMLOrFlightImpl(
     // to treat chunk loading with similar semantics as cache reads to avoid
     // async loading chunks from causing a prerender to abort too early.
     // @ts-ignore
-    globalThis.__next_chunk_load__ = (...args: Array<any>) => {
+    globalThis.__next_chunk_load__ = (
+      ...args: Parameters<typeof instrumented.loadChunk>
+    ) => {
       const loadingChunk = instrumented.loadChunk(...args)
       trackChunkLoading(loadingChunk)
       return loadingChunk

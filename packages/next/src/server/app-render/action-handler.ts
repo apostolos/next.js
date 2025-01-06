@@ -915,7 +915,10 @@ export async function handleAction({
       }
 
       const actionHandler = (
-        await ComponentMod.__next_app__.require(actionModId)
+        (await ComponentMod.__next_app__.require(actionModId)) as Record<
+          string,
+          (...args: unknown[]) => Promise<unknown>
+        >
       )[
         // `actionId` must exist if we got here, as otherwise we would have thrown an error above
         actionId!
