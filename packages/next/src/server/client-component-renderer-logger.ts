@@ -29,11 +29,11 @@ export function wrapClientComponentLoader(
     },
     loadChunk: (...args) => {
       const startTime = performance.now()
-      try {
-        return ComponentMod.__next_app__.loadChunk(...args)
-      } finally {
+      const result = ComponentMod.__next_app__.loadChunk(...args)
+      result.finally(() => {
         clientComponentLoadTimes += performance.now() - startTime
-      }
+      })
+      return result
     },
   }
 }
