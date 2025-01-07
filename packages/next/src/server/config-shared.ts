@@ -573,6 +573,13 @@ export interface ExperimentalConfig {
    * Enables the streaming metadata by default or not.
    */
   streamingMetadata?: boolean
+
+  /**
+   * @experimental This is temporary and will be **changed** in the short future.
+   * User Agent of bots that can handle streaming metadata.
+   * Besides the default behavior, Next.js act differently on serving metadata to bots based on their capability.
+   */
+  streamingMetadataBotsUserAgent?: RegExp
 }
 
 export type ExportPathMap = {
@@ -1197,6 +1204,7 @@ export const defaultConfig: NextConfig = {
     dynamicIO: false,
     inlineCss: false,
     newDevOverlay: false,
+    streamingMetadataBotsUserAgent: undefined,
   },
   bundlePagesRouterDependencies: false,
 }

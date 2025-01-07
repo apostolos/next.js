@@ -214,6 +214,7 @@ import {
   getParsedNodeOptionsWithoutInspect,
 } from '../server/lib/utils'
 import { InvariantError } from '../shared/lib/invariant-error'
+import { HEADLESS_BOT_UA_RE } from '../shared/lib/router/utils/is-bot'
 
 type Fallback = null | boolean | string
 
@@ -419,6 +420,7 @@ export type RoutesManifest = {
       headers: Record<string, string>
     }
   }
+  streamingMetadataBotsUserAgent: string
 }
 
 function pageToRoute(page: string) {
@@ -1237,6 +1239,12 @@ export default async function build(
             pages404: true,
             caseSensitive: !!config.experimental.caseSensitiveRoutes,
             basePath: config.basePath,
+            streamingMetadataBotsUserAgent:
+              // Use the user configured UA regex if available, otherwise use the built-in default.
+              (
+                config.experimental.streamingMetadataBotsUserAgent ||
+                HEADLESS_BOT_UA_RE
+              ).source,
             redirects: redirects.map((r) =>
               buildCustomRoute('redirect', r, restrictedRedirectPaths)
             ),
