@@ -1,68 +1,55 @@
 import { noop as css } from '../../../helpers/noop-template'
 
 const styles = css`
-  [data-nextjs-dialog-left-right] {
+  .error-overlay-pagination {
     display: flex;
-    flex-direction: row;
-    align-content: center;
-    align-items: center;
-    justify-content: space-between;
-  }
-  [data-nextjs-dialog-left-right] > nav {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    margin-right: var(--size-gap);
-  }
-  [data-nextjs-dialog-left-right] > nav > button {
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 
-    width: calc(var(--size-gap-double) + var(--size-gap));
-    height: calc(var(--size-gap-double) + var(--size-gap));
-    font-size: 0;
+    padding: var(--size-1);
+    gap: var(--size-2);
+    background: var(--color-background-100);
+    box-shadow: var(--shadow-sm);
+
+    border: 1px solid var(--color-gray-400);
+    border-radius: var(--rounded-full);
+  }
+
+  .error-overlay-pagination-count {
+    color: var(--color-gray-900);
+    text-align: center;
+    font-size: var(--size-font-small);
+    font-weight: 500;
+    line-height: var(--size-4);
+  }
+
+  .error-overlay-pagination-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: var(--size-1);
+    background: var(--color-gray-300);
+
     border: none;
-    background-color: rgba(255, 85, 85, 0.1);
-    color: var(--color-ansi-red);
-    cursor: pointer;
-    transition: background-color 0.25s ease;
-  }
-  [data-nextjs-dialog-left-right] > nav > button > svg {
-    width: auto;
-    height: calc(var(--size-gap) + var(--size-gap-half));
-  }
-  [data-nextjs-dialog-left-right] > nav > button:hover {
-    background-color: rgba(255, 85, 85, 0.2);
-  }
-  [data-nextjs-dialog-left-right] > nav > button:disabled {
-    background-color: rgba(255, 85, 85, 0.1);
-    color: rgba(255, 85, 85, 0.4);
-    cursor: not-allowed;
+    border-radius: var(--rounded-full);
+
+    &:focus {
+      outline: none;
+    }
+
+    &:not(:disabled):active {
+      background: var(--color-gray-500);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 
-  [data-nextjs-dialog-left-right] > nav > button:first-of-type {
-    border-radius: var(--size-gap-half) 0 0 var(--size-gap-half);
-    margin-right: 1px;
-  }
-  [data-nextjs-dialog-left-right] > nav > button:last-of-type {
-    border-radius: 0 var(--size-gap-half) var(--size-gap-half) 0;
-  }
-
-  [data-nextjs-dialog-left-right] > button:last-of-type {
-    border: 0;
-    padding: 0;
-
-    background-color: transparent;
-    appearance: none;
-
-    opacity: 0.4;
-    transition: opacity 0.25s ease;
-
-    color: var(--color-font);
-  }
-  [data-nextjs-dialog-left-right] > button:last-of-type:hover {
-    opacity: 0.7;
+  .error-overlay-pagination-button-icon {
+    color: var(--color-gray-1000);
   }
 `
 
