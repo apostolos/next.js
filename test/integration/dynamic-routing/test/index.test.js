@@ -1519,6 +1519,8 @@ function runTests({ dev }) {
           prefetchSuffix: '.prefetch.rsc',
           suffix: '.rsc',
         },
+        streamingMetadataBotsUserAgent:
+          'Googlebot|Google-PageRenderer|AdsBot-Google|googleweblight|Storebot-Google',
       })
     })
 
