@@ -106,6 +106,7 @@ export function Errors({
   isAppDir,
   errors,
   initialDisplayState,
+  versionInfo,
   hasStaticIndicator,
   debugInfo,
 }: ErrorsProps) {
@@ -268,6 +269,7 @@ export function Errors({
       activeIdx={activeIdx}
       setActiveIndex={setActiveIndex}
       footerMessage={footerMessage}
+      versionInfo={versionInfo}
     >
       <div className="error-overlay-notes-container">
         {notes ? (
