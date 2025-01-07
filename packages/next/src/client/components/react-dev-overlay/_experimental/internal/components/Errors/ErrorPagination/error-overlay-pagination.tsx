@@ -9,7 +9,7 @@ type ErrorPaginationProps = {
   onActiveIndexChange: (index: number) => void
 }
 
-export function ErrorPagination({
+export function ErrorOverlayPagination({
   readyErrors,
   activeIdx,
   onActiveIndexChange,

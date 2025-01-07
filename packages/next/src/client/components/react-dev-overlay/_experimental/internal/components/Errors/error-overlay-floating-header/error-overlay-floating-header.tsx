@@ -1,7 +1,7 @@
 import type { ReadyRuntimeError } from '../../../helpers/get-error-by-type'
 import type { VersionInfo } from '../../../../../../../../server/dev/parse-version-info'
 
-import { ErrorPagination } from '../ErrorPagination/ErrorPagination'
+import { ErrorOverlayPagination } from '../ErrorPagination/error-overlay-pagination'
 import { VersionStalenessInfo } from '../../VersionStalenessInfo'
 import { noop as css } from '../../../helpers/noop-template'
 
@@ -21,7 +21,7 @@ export function ErrorOverlayFloatingHeader({
   return (
     <div className="error-overlay-floating-header">
       {/* TODO: better passing data instead of nullish coalescing */}
-      <ErrorPagination
+      <ErrorOverlayPagination
         readyErrors={readyErrors ?? []}
         activeIdx={activeIdx ?? 0}
         onActiveIndexChange={setActiveIndex ?? (() => {})}
