@@ -1,7 +1,7 @@
 import type { ReadyRuntimeError } from '../../../helpers/get-error-by-type'
 import type { VersionInfo } from '../../../../../../../../server/dev/parse-version-info'
 
-import { ErrorOverlayPagination } from '../ErrorPagination/error-overlay-pagination'
+import { ErrorOverlayPagination } from '../error-overlay-pagination/error-overlay-pagination'
 import { VersionStalenessInfo } from '../../VersionStalenessInfo'
 import { noop as css } from '../../../helpers/noop-template'
 
