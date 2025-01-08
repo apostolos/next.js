@@ -329,7 +329,7 @@ describe('app-dir - capture-console-error', () => {
        {
          "callStacks": "",
          "count": 1,
-         "description": "",
+         "description": "dummy error message",
          "source": "app/browser/error-event/page.js (14:16) @ onClick
 
          12 |
@@ -347,9 +347,9 @@ describe('app-dir - capture-console-error', () => {
        {
          "callStacks": "",
          "count": 1,
-         "description": "",
+         "description": "dummy error message",
          "source": "app/browser/error-event/page.js (14:16) @ onClick
-  
+
          12 |
          13 |         // Dispatch the event
        > 14 |         window.dispatchEvent(errorEvent)
