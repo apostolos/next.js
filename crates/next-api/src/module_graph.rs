@@ -504,8 +504,7 @@ impl ReducedGraphs {
                 .try_join()
                 .await
         }
-        .instrument(tracing::info_span!("generating next/dynamic graphs"))
-        .await?;
+        .instrument(tracing::info_span!("generating next/dynamic graphs"));
 
         let server_actions = async {
             graphs
@@ -516,8 +515,7 @@ impl ReducedGraphs {
                 .try_join()
                 .await
         }
-        .instrument(tracing::info_span!("generating server actions graphs"))
-        .await?;
+        .instrument(tracing::info_span!("generating server actions graphs"));
 
         let client_references = async {
             graphs
@@ -528,13 +526,15 @@ impl ReducedGraphs {
                 .try_join()
                 .await
         }
-        .instrument(tracing::info_span!("generating client references graphs"))
-        .await?;
+        .instrument(tracing::info_span!("generating client references graphs"));
+
+        let (next_dynamic, server_actions, client_references) =
+            futures::join!(next_dynamic, server_actions, client_references);
 
         Ok(Self {
-            next_dynamic,
-            server_actions,
-            client_references,
+            next_dynamic: next_dynamic?,
+            server_actions: server_actions?,
+            client_references: client_references?,
         }
         .cell())
     }
