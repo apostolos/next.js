@@ -79,7 +79,7 @@ export function ErrorOverlayLayout({
 
       <ErrorOverlayDialog onClose={onClose} isTurbopack={isTurbopack}>
         <DialogContent>
-          <ErrorOverlayDialogHeader>
+          <ErrorOverlayDialogHeader isTurbopack={isTurbopack}>
             <div
               className="nextjs__container_errors__error_title"
               // allow assertion in tests before error rating is implemented
