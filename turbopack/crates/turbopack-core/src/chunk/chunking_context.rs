@@ -7,7 +7,7 @@ use turbo_tasks_hash::DeterministicHash;
 
 use super::{availability_info::AvailabilityInfo, ChunkableModule, EvaluatableAssets};
 use crate::{
-    chunk::{ChunkItem, ModuleId},
+    chunk::{ChunkItem, ChunkableModules, ModuleId},
     environment::Environment,
     ident::AssetIdent,
     module::Module,
@@ -121,16 +121,16 @@ pub trait ChunkingContext {
     fn chunk_group(
         self: Vc<Self>,
         ident: Vc<AssetIdent>,
-        module: Vc<Box<dyn ChunkableModule>>,
+        module: ResolvedVc<Box<dyn ChunkableModule>>,
         availability_info: Value<AvailabilityInfo>,
     ) -> Vc<ChunkGroupResult> {
-        self.chunk_group_multiple(ident, vec![module], availability_info)
+        self.chunk_group_multiple(ident, Vc::cell(vec![module]), availability_info)
     }
 
     fn chunk_group_multiple(
         self: Vc<Self>,
         ident: Vc<AssetIdent>,
-        modules: Vec<Vc<Box<dyn ChunkableModule>>>,
+        modules: Vc<ChunkableModules>,
         availability_info: Value<AvailabilityInfo>,
     ) -> Vc<ChunkGroupResult>;
 

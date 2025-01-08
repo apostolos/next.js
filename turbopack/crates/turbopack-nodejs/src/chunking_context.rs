@@ -10,7 +10,7 @@ use turbopack_core::{
         availability_info::AvailabilityInfo,
         chunk_group::{make_chunk_group, MakeChunkGroupResult},
         module_id_strategies::{DevModuleIdStrategy, ModuleIdStrategy},
-        Chunk, ChunkGroupResult, ChunkItem, ChunkableModule, ChunkingContext,
+        Chunk, ChunkGroupResult, ChunkItem, ChunkableModule, ChunkableModules, ChunkingContext,
         EntryChunkGroupResult, EvaluatableAssets, MinifyType, ModuleId,
     },
     environment::Environment,
@@ -295,17 +295,18 @@ impl ChunkingContext for NodeJsChunkingContext {
     async fn chunk_group_multiple(
         self: Vc<Self>,
         ident: Vc<AssetIdent>,
-        modules: Vec<ResolvedVc<Box<dyn ChunkableModule>>>,
+        modules: Vc<ChunkableModules>,
         availability_info: Value<AvailabilityInfo>,
     ) -> Result<Vc<ChunkGroupResult>> {
         let span = tracing::info_span!("chunking", module = ident.to_string().await?.to_string());
         async move {
+            let modules = modules.await?;
             let MakeChunkGroupResult {
                 chunks,
                 availability_info,
             } = make_chunk_group(
                 Vc::upcast(self),
-                modules.into_iter().map(ResolvedVc::upcast),
+                modules.iter().copied().map(ResolvedVc::upcast),
                 availability_info.into_value(),
             )
             .await?;

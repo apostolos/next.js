@@ -1518,9 +1518,9 @@ impl AppEndpoint {
                                 .server_utils
                                 .iter()
                                 .map(|m| async move {
-                                    Ok(*ResolvedVc::try_downcast::<Box<dyn ChunkableModule>>(*m)
+                                    ResolvedVc::try_downcast::<Box<dyn ChunkableModule>>(*m)
                                         .await?
-                                        .context("Expected server utils to be chunkable")?)
+                                        .context("Expected server utils to be chunkable")
                                 })
                                 .try_join()
                                 .await?;
@@ -1530,7 +1530,7 @@ impl AppEndpoint {
                                         this.app_project.project().project_path(),
                                     )
                                     .with_modifier(server_utils_modifier()),
-                                    server_utils,
+                                    Vc::cell(server_utils),
                                     Value::new(current_availability_info),
                                 )
                                 .await?;
