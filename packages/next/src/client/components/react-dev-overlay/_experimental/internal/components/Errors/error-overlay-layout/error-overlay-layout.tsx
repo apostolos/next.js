@@ -48,6 +48,7 @@ type ErrorOverlayLayoutProps = {
   activeIdx?: number
   setActiveIndex?: (index: number) => void
   footerMessage?: string
+  isTurbopack?: boolean
 }
 
 export function ErrorOverlayLayout({
@@ -64,6 +65,7 @@ export function ErrorOverlayLayout({
   activeIdx,
   setActiveIndex,
   footerMessage,
+  isTurbopack = !!process.env.TURBOPACK,
 }: ErrorOverlayLayoutProps) {
   return (
     <Overlay fixed={isBuildError}>
@@ -72,9 +74,10 @@ export function ErrorOverlayLayout({
         activeIdx={activeIdx}
         setActiveIndex={setActiveIndex}
         versionInfo={versionInfo}
+        isTurbopack={isTurbopack}
       />
 
-      <ErrorOverlayDialog onClose={onClose}>
+      <ErrorOverlayDialog onClose={onClose} isTurbopack={isTurbopack}>
         <DialogContent>
           <ErrorOverlayDialogHeader>
             <div
