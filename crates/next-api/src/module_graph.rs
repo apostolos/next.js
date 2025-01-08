@@ -703,20 +703,37 @@ pub async fn get_reduced_graphs_for_endpoint(
 }
 
 #[turbo_tasks::function]
+async fn get_module_graph_for_project_without_issues(
+    project: Vc<Project>,
+) -> Result<Vc<SingleModuleGraph>> {
+    let graph_op = get_module_graph_for_project(project);
+    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
+    let graph = graph_op.resolve_strongly_consistent().await?;
+    let _ = graph_op.take_collectibles::<Box<dyn Issue>>();
+    Ok(graph)
+}
+
+#[turbo_tasks::function]
+async fn get_additional_module_graph_for_project_without_issues(
+    project: Vc<Project>,
+    graph: Vc<SingleModuleGraph>,
+) -> Result<Vc<SingleModuleGraph>> {
+    let graph_op = get_additional_module_graph_for_project(project, graph);
+    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
+    let graph = graph_op.resolve_strongly_consistent().await?;
+    let _ = graph_op.take_collectibles::<Box<dyn Issue>>();
+    Ok(graph)
+}
+
+#[turbo_tasks::function]
 pub async fn get_global_module_id_strategy(
     project: Vc<Project>,
 ) -> Result<Vc<GlobalModuleIdStrategy>> {
-    let graph_op = get_module_graph_for_project(project);
-    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
-    let graph = graph_op.strongly_consistent().await?;
-    let _ = graph_op.take_collectibles::<Box<dyn Issue>>();
+    let graph = get_module_graph_for_project_without_issues(project);
+    let additional_graph =
+        get_additional_module_graph_for_project_without_issues(project, graph).await?;
 
-    let additional_graph_op = get_additional_module_graph_for_project(project, graph_op);
-    // TODO get rid of this once everything inside calls `take_collectibles()` when needed
-    let additional_graph = additional_graph_op.strongly_consistent().await?;
-    let _ = additional_graph_op.take_collectibles::<Box<dyn Issue>>();
-
-    let graphs = [graph, additional_graph];
+    let graphs = [graph.await?, additional_graph];
 
     let mut idents: Vec<_> = graphs
         .iter()
